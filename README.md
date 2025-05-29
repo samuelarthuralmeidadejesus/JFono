@@ -254,9 +254,6 @@ public class Profissional {
 - **Interface Gráfica**: Desenvolver uma interface amigável para facilitar o uso por profissionais e pacientes.
 - **Funcionalidades Avançadas**: Adicionar relatórios de progresso, notificações para pacientes e integração com dispositivos de áudio para análise de voz.
 
-## 📜 Licença
-
-Este projeto é de código aberto e está licenciado sob a [MIT License](LICENSE). Sinta-se à vontade para contribuir ou adaptar o JFono às suas necessidades!
 
 ---
 
