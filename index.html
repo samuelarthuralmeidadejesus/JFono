@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JFono — Sistema de Monitoramento Vocal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0e1419;
+    --surface2: #141b23;
+    --accent: #00d4aa;
+    --accent2: #0099ff;
+    --text: #e8f0f7;
+    --muted: #6b7f94;
+    --border: rgba(0,212,170,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,212,170,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb2 {
+    position: fixed;
+    bottom: -200px;
+    left: -200px;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(0,153,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Nav */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 3rem;
+    background: rgba(8,12,16,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    background: rgba(0,212,170,0.05);
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.7s 0.1s ease both;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 520px;
+    margin-bottom: 3rem;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.8rem;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #080c10;
+  }
+  .btn-primary:hover { background: #00f0c0; transform: translateY(-2px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+  /* Stats bar */
+  .stats-bar {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin: 0 2rem 5rem;
+    animation: fadeUp 0.7s 0.4s ease both;
+  }
+
+  .stat-item {
+    padding: 1.5rem 3rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    text-align: center;
+  }
+  .stat-item:first-child { border-radius: 12px 0 0 12px; }
+  .stat-item:last-child { border-radius: 0 12px 12px 0; }
+  .stat-item + .stat-item { border-left: none; }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent);
+    display: block;
+  }
+  .stat-label { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.05em; }
+
+  /* Sections */
+  section {
+    position: relative;
+    z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 1rem;
+  }
+
+  .section-desc {
+    color: var(--muted);
+    max-width: 560px;
+    margin-bottom: 3rem;
+    line-height: 1.8;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .card {
+    background: var(--surface);
+    padding: 2rem;
+    transition: background 0.2s;
+  }
+  .card:hover { background: var(--surface2); }
+
+  .card-icon {
+    width: 40px; height: 40px;
+    background: rgba(0,212,170,0.1);
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .card p { font-size: 0.82rem; color: var(--muted); line-height: 1.7; }
+
+  /* Classes section */
+  .classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .class-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .class-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transform: scaleX(0);
+    transition: transform 0.3s;
+  }
+
+  .class-card:hover::before { transform: scaleX(1); }
+  .class-card:hover { border-color: rgba(0,212,170,0.3); transform: translateY(-3px); }
+
+  .class-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .class-file {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .class-attrs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .attr-tag {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(0,212,170,0.08);
+    border: 1px solid rgba(0,212,170,0.15);
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* Code block */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .code-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .code-filename {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  pre {
+    padding: 1.5rem;
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+
+  .kw { color: #ff7b72; }
+  .cl { color: #ffa657; }
+  .str { color: #a5d6ff; }
+  .cm { color: #484f58; }
+  .fn { color: #d2a8ff; }
+  .num { color: #79c0ff; }
+
+  /* Tech section */
+  .tech-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .tech-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    transition: all 0.2s;
+  }
+
+  .tech-badge:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .tech-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Roadmap */
+  .roadmap {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .roadmap-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .roadmap-item:last-child { border-bottom: none; }
+  .roadmap-item:hover { background: var(--surface2); }
+
+  .roadmap-status {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  .status-done { background: rgba(0,212,170,0.15); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+  .status-next { background: rgba(0,153,255,0.1); color: var(--accent2); border: 1px solid rgba(0,153,255,0.2); }
+  .status-future { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid var(--border); }
+
+  .roadmap-text { font-size: 0.85rem; color: var(--text); }
+  .roadmap-tag { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  footer p { font-size: 0.8rem; color: var(--muted); }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* Divider */
+  .divider {
+    position: relative;
+    z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 600px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    .stats-bar { flex-direction: column; gap: 1px; margin: 0 1rem 3rem; }
+    .stat-item { border-radius: 0 !important; border-left: 1px solid var(--border) !important; }
+    .stat-item:first-child { border-radius: 12px 12px 0 0 !important; }
+    .stat-item:last-child { border-radius: 0 0 12px 12px !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb2"></div>
+
+<nav>
+  <a href="#" class="nav-logo">JFono</a>
+  <ul class="nav-links">
+    <li><a href="#sobre">sobre</a></li>
+    <li><a href="#estrutura">estrutura</a></li>
+    <li><a href="#codigo">código</a></li>
+    <li><a href="#roadmap">roadmap</a></li>
+    <li><a href="https://github.com/samuelarthuralmeidadejesus/JFono" target="_blank">github ↗</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-tag">Projeto Acadêmico · SENAI · Java</div>
+  <h1>J<span>Fono</span></h1>
+  <p class="hero-sub">Sistema de monitoramento de exercícios vocais para clínicas de fonoaudiologia — desenvolvido com Java e Programação Orientada a Objetos.</p>
+  <div class="hero-buttons">
+    <a href="https://github.com/samuelarthuralmeidadejesus/JFono" target="_blank" class="btn btn-primary">Ver no GitHub ↗</a>
+    <a href="#sobre" class="btn btn-secondary">Saiba mais</a>
+  </div>
+</section>
+
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-num">5</span>
+    <span class="stat-label">Classes Java</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">POO</span>
+    <span class="stat-label">Paradigma</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">100%</span>
+    <span class="stat-label">Java</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">SENAI</span>
+    <span class="stat-label">Origem</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<section id="sobre">
+  <div class="fade-in">
+    <p class="section-label">// contexto</p>
+    <h2 class="section-title">O problema que o JFono resolve</h2>
+    <p class="section-desc">O acompanhamento vocal é frequentemente feito de forma manual, dificultando a organização e comunicação entre profissionais e pacientes. O JFono propõe uma solução digital para fonoaudiólogos e clínicas.</p>
+  </div>
+  <div class="cards fade-in">
+    <div class="card">
+      <div class="card-icon">🎙️</div>
+      <h3>Monitoramento Vocal</h3>
+      <p>Centraliza exercícios vocais com descrições, sons e tempo mínimo de execução para cada paciente.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏥</div>
+      <h3>Gestão de Clínicas</h3>
+      <p>Organiza dados institucionais de clínicas de fonoaudiologia com CNPJ e identificação única.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">👤</div>
+      <h3>Perfis Completos</h3>
+      <p>Modela pacientes e profissionais com atributos, contatos e métodos de atualização de dados.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="estrutura">
+  <div class="fade-in">
+    <p class="section-label">// arquitetura</p>
+    <h2 class="section-title">Estrutura do projeto</h2>
+    <p class="section-desc">O JFono é organizado em classes que modelam as entidades centrais do sistema, aplicando encapsulamento, construtores e métodos de forma modular.</p>
+  </div>
+  <div class="classes-grid fade-in">
+    <div class="class-card">
+      <div class="class-name">App</div>
+      <div class="class-file">App.java</div>
+      <div class="class-attrs">
+        <span class="attr-tag">main()</span>
+        <span class="attr-tag">ponto de entrada</span>
+      </div>
+    </div>
+    <div class="class-card">
+      <div class="class-name">Exercicio</div>
+      <div class="class-file">Exercicio.java</div>
+      <div class="class-attrs">
+        <span class="attr-tag">nome</span>
+        <span class="attr-tag">descricao</span>
+        <span class="attr-tag">som</span>
+        <span class="attr-tag">tempoMin</span>
+      </div>
+    </div>
+    <div class="class-card">
+      <div class="class-name">Clinica</div>
+      <div class="class-file">Clinica.java</div>
+      <div class="class-attrs">
+        <span class="attr-tag">id</span>
+        <span class="attr-tag">nome</span>
+        <span class="attr-tag">cnpj</span>
+      </div>
+    </div>
+    <div class="class-card">
+      <div class="class-name">Paciente</div>
+      <div class="class-file">Paciente.java</div>
+      <div class="class-attrs">
+        <span class="attr-tag">id</span>
+        <span class="attr-tag">nome</span>
+        <span class="attr-tag">email</span>
+      </div>
+    </div>
+    <div class="class-card">
+      <div class="class-name">Profissional</div>
+      <div class="class-file">Profissional.java</div>
+      <div class="class-attrs">
+        <span class="attr-tag">id</span>
+        <span class="attr-tag">nome</span>
+        <span class="attr-tag">telefone</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="codigo">
+  <div class="fade-in">
+    <p class="section-label">// código</p>
+    <h2 class="section-title">Exemplo de uso</h2>
+    <p class="section-desc">Instanciação e manipulação das classes principais do sistema, demonstrando construtores sobrecarregados e encapsulamento.</p>
+  </div>
+  <div class="code-block fade-in">
+    <div class="code-header">
+      <div class="code-dot" style="background:#ff5f57"></div>
+      <div class="code-dot" style="background:#febc2e"></div>
+      <div class="code-dot" style="background:#28c840"></div>
+      <span class="code-filename">App.java</span>
+    </div>
+    <pre><span class="cm">// Exercícios vocais com construtores sobrecarregados</span>
+<span class="cl">Exercicio</span> ex1 = <span class="kw">new</span> <span class="fn">Exercicio</span>(<span class="str">"Soprar Canudo"</span>, <span class="str">"Relaxar cordas vocais"</span>, <span class="str">"/"</span>, <span class="num">3</span>, <span class="str">"/"</span>);
+<span class="cl">Exercicio</span> ex2 = <span class="kw">new</span> <span class="fn">Exercicio</span>(<span class="str">"Vibração Labial"</span>, <span class="str">"Vibrar lábios"</span>, <span class="str">"brrrrr"</span>);
+<span class="cl">Exercicio</span> ex3 = <span class="kw">new</span> <span class="fn">Exercicio</span>(<span class="str">"Canto Sustentado"</span>);
+
+<span class="cm">// Clínicas</span>
+<span class="cl">Clinica</span> c1 = <span class="kw">new</span> <span class="fn">Clinica</span>(<span class="str">"Voz &amp; Saúde"</span>, <span class="str">"12.345.678/0001-99"</span>);
+
+<span class="cm">// Pacientes com setter</span>
+<span class="cl">Paciente</span> pac = <span class="kw">new</span> <span class="fn">Paciente</span>();
+pac.<span class="fn">setNome</span>(<span class="str">"Lucas Oliveira"</span>);
+pac.<span class="fn">setEmail</span>(<span class="str">"lucas@email.com"</span>);
+
+<span class="cm">// Profissional</span>
+<span class="cl">Profissional</span> p1 = <span class="kw">new</span> <span class="fn">Profissional</span>(<span class="str">"Dr. João Lima"</span>, <span class="str">"(11) 98765-4321"</span>);</pre>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="fade-in">
+    <p class="section-label">// tecnologias</p>
+    <h2 class="section-title">Stack utilizada</h2>
+  </div>
+  <div class="tech-list fade-in">
+    <div class="tech-badge"><div class="tech-dot" style="background:#f89820"></div>Java</div>
+    <div class="tech-badge"><div class="tech-dot" style="background:#00d4aa"></div>POO / OOP</div>
+    <div class="tech-badge"><div class="tech-dot" style="background:#f05033"></div>Git</div>
+    <div class="tech-badge"><div class="tech-dot" style="background:#fff"></div>GitHub</div>
+    <div class="tech-badge"><div class="tech-dot" style="background:#007acc"></div>VS Code</div>
+    <div class="tech-badge"><div class="tech-dot" style="background:#0099ff"></div>SENAI</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section id="roadmap">
+  <div class="fade-in">
+    <p class="section-label">// próximos passos</p>
+    <h2 class="section-title">Roadmap</h2>
+    <p class="section-desc">O que já foi feito e o que vem por aí no desenvolvimento do JFono.</p>
+  </div>
+  <div class="roadmap fade-in">
+    <div class="roadmap-item">
+      <div class="roadmap-status status-done">✓</div>
+      <span class="roadmap-text">Modelagem das classes principais com POO</span>
+      <span class="roadmap-tag">concluído</span>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-status status-done">✓</div>
+      <span class="roadmap-text">Encapsulamento com getters e setters</span>
+      <span class="roadmap-tag">concluído</span>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-status status-done">✓</div>
+      <span class="roadmap-text">Construtores sobrecarregados na classe Exercicio</span>
+      <span class="roadmap-tag">concluído</span>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-status status-next">→</div>
+      <span class="roadmap-text">Integração com banco de dados (MySQL / SQLite)</span>
+      <span class="roadmap-tag">em breve</span>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-status status-next">→</div>
+      <span class="roadmap-text">Interface gráfica com JavaFX ou Swing</span>
+      <span class="roadmap-tag">em breve</span>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-status status-future">◯</div>
+      <span class="roadmap-text">Relatórios de progresso e notificações para pacientes</span>
+      <span class="roadmap-tag">futuro</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Desenvolvido por <a href="https://github.com/samuelarthuralmeidadejesus" target="_blank">Samuel Arthur</a> · Projeto acadêmico SENAI · Brasília, DF</p>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
